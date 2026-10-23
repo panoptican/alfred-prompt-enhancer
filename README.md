@@ -42,6 +42,8 @@ Each action has a bundled template in the workflow's `templates` folder: `opus-5
 
 To change a template, copy it into your templates folder and edit the copy without renaming it. The workflow uses your copy instead of the bundled one, and updating the workflow leaves your copy alone.
 
+Your folder only needs the templates you've changed, because any action without a matching file keeps using its bundled template. Files are matched by exact name, so the workflow ignores a renamed copy without warning. It also ignores files that don't match one of the seven actions, so adding a template can't add a new model.
+
 Two lines in each template come from your settings. `{{ABOUT_USER}}` becomes "About the user" followed by your description, and `{{MISHEARD_NAMES}}` becomes a sentence listing your names. When a setting is blank, its line is removed.
 
 ## Updating a model
