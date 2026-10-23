@@ -1,66 +1,62 @@
 # Prompt Enhancer for Alfred
 
-Select some text, such as a rough speech-to-text dump, and turn it into a clear prompt written for the model you're about to paste it into. The rewritten prompt lands on your clipboard.
+Prompt Enhancer turns rough text into a clear prompt for the model you're about to paste it into. Select the text anywhere on your Mac, pick the model from Alfred's Universal Actions, and the rewritten prompt is copied to your clipboard shortly after.
 
-Each model gets its own template, tuned to that model's prompting guide:
+I built it because I dictate most of my prompts, and dictation comes out as a ramble full of false starts and self-corrections. The workflow keeps what I meant and drops the rest. It holds on to the request itself, so a question stays a question and a review doesn't turn into a fix. When a fact that would change the result is missing, such as which project or where the output should go, it leaves a short bracketed question in the prompt, like `[which prototype?]`, so I can fill it in before I paste.
 
-- Claude Opus 5.5, Sonnet 5.5, Haiku 5.5 and Fable 5.1
-- GPT 6.1 Sol, GPT 6 Luna and GPT 6 Astra
-
-The rewrite keeps what you asked for. It cleans up filler and self-corrections, keeps your intent and constraints, and doesn't turn a question into a change. When a fact that would change the result is missing, such as which project or where output should go, it leaves a short bracketed question in the prompt, like `[which prototype?]`, so you can fill it in before you paste.
+Each action uses a template written for that model. The workflow includes Claude Opus 5.5, Sonnet 5.5, Haiku 5.5 and Fable 5.1, and GPT 6.1 Sol, GPT 6 Luna and GPT 6 Astra.
 
 ## Requirements
 
-- macOS with [Alfred 5](https://www.alfredapp.com) and the Powerpack (Universal Actions need it).
-- For the Claude actions: [Claude Code](https://claude.com/claude-code), signed in (`claude auth login`), with access to the models you use.
-- For the GPT actions: the [Codex CLI](https://github.com/openai/codex), signed in (`codex login`), with access to the models you use.
+You need macOS with [Alfred 5](https://www.alfredapp.com) and the Powerpack, which Universal Actions require.
 
-You only need the CLI for the models you plan to use.
+The Claude actions run through [Claude Code](https://claude.com/claude-code) and the GPT actions run through the [Codex CLI](https://github.com/openai/codex). Install the one you plan to use, sign in with `claude auth login` or `codex login`, and make sure your account has access to those models.
 
 ## Install
 
 1. Download `Prompt-Enhancer-<version>.alfredworkflow` from the latest release.
-2. Double-click it and choose **Import** in Alfred.
-3. Fill in any settings you want (all optional, see below).
+2. Double-click the file and choose Import in Alfred.
+3. Fill in any of the optional settings described below, then choose Import again.
 
 ## Use
 
 1. Select text in any app.
-2. Open Universal Actions (by default, select the text and press the Universal Actions hotkey, or press → on a result in Alfred).
-3. Pick the "PE:" action for the model you'll paste into, such as **PE: Claude Sonnet 5.5**.
-4. Wait for the "Prompt enhanced" notification, then paste.
+2. Press your Universal Actions hotkey, which you can set in Alfred Preferences under Features → Universal Actions.
+3. Choose the action for the model you'll paste into, such as "PE: Claude Sonnet 5.5".
+4. Paste when the "Prompt enhanced" notification appears.
 
-The rewrite runs in the background, so you can keep working. Most rewrites take a few seconds to half a minute.
+The rewrite runs in the background, so you can keep working while it finishes. Most take somewhere between a few seconds and half a minute.
 
 ## Settings
 
-Open Alfred Preferences → Workflows → Prompt Enhancer → **Configure Workflow**.
+All settings are optional. To change them later, open Alfred Preferences, select Prompt Enhancer under Workflows, and choose Configure Workflow.
 
-- **Effort**: how much the model thinks before rewriting. Low, Medium (default) or High.
-- **About you**: a short phrase such as "a backend developer who works mostly in Python". It helps prompts match your role and voice.
-- **Misheard names**: comma-separated names your dictation often gets wrong, such as "Figma, Raycast, Supabase". The rewrite uses them to fix mis-transcriptions.
-- **Templates folder**: a folder of your own templates (see below).
+- Effort sets how much the model thinks before rewriting. Choose Low, Medium or High. Medium is the default.
+- About you is a short description of yourself, such as "a backend developer who works mostly in Python", so prompts fit your role and voice.
+- Misheard names is a comma-separated list of names your dictation tends to get wrong, such as "Figma, Raycast, Supabase". The rewrite uses it to correct them.
+- Templates folder points to a folder of your own templates, described in the next section.
 
 ## Templates
 
-The bundled templates are in the workflow's `templates/` folder, one per action: `opus-5-5.md`, `sonnet-5-5.md`, `haiku-5-5.md`, `fable-5-1.md`, `gpt-6.1-sol.md`, `gpt-6-luna.md` and `gpt-6-astra.md`.
+Each action has a bundled template in the workflow's `templates` folder: `opus-5-5.md`, `sonnet-5-5.md`, `haiku-5-5.md`, `fable-5-1.md`, `gpt-6.1-sol.md`, `gpt-6-luna.md` and `gpt-6-astra.md`.
 
-To change one, copy it into your templates folder, keep the same file name, and edit the copy. Your file then replaces the bundled one, and workflow updates won't overwrite it.
+To change a template, copy it into your templates folder and edit the copy without renaming it. The workflow uses your copy instead of the bundled one, and updating the workflow leaves your copy alone.
 
-Two placeholder lines are filled in from your settings and removed when the setting is blank:
-
-- `{{ABOUT_USER}}` becomes "About the user: …"
-- `{{MISHEARD_NAMES}}` becomes "Names that often come through wrong include …"
+Two lines in each template come from your settings. `{{ABOUT_USER}}` becomes "About the user" followed by your description, and `{{MISHEARD_NAMES}}` becomes a sentence listing your names. When a setting is blank, its line is removed.
 
 ## Updating a model
 
-The model IDs are listed at the top of `enhance.zsh` in the workflow folder. To point an action at a newer model, change its ID there. To add a model, add a line there, add a template named after the mode, and add a Universal Action that sets `ENHANCER_MODE` to that mode.
+The model IDs are listed at the top of `enhance.zsh` in the workflow folder. To move an action to a newer model, change its ID there.
+
+Adding a model takes three matching pieces: a line in that list, a template named after the new mode, and a Universal Action that sets `ENHANCER_MODE` to the mode.
 
 ## Troubleshooting
 
-- **A notification says a CLI isn't installed or signed in.** Follow the command it gives in Terminal, then try again.
-- **The CLI is installed but not found.** Alfred runs with a minimal PATH. The workflow also asks your login shell. If it still can't find the CLI, add a `CLAUDE_BIN` or `CODEX_BIN` workflow environment variable with the full path (Alfred Preferences → Workflows → Prompt Enhancer → `[x]` button).
-- **Logs.** Each run keeps a folder with the request, output and errors in Alfred's workflow cache (`~/Library/Caches/com.runningwithcrayons.Alfred/Workflow Data/net.spidleweb.prompt-enhancer/`). Only the 20 newest runs are kept, since each one includes the selected text.
+If a notification says Claude Code or Codex isn't installed or isn't signed in, run the command it gives in Terminal and try again.
+
+If the CLI is installed but the workflow can't find it, the cause is usually Alfred's limited PATH. The workflow already checks the same locations your login shell uses. If it still fails, open the workflow in Alfred Preferences, choose the `[x]` button to add an environment variable, and set `CLAUDE_BIN` or `CODEX_BIN` to the CLI's full path.
+
+Each run saves its request, output and any errors in Alfred's workflow cache, at `~/Library/Caches/com.runningwithcrayons.Alfred/Workflow Data/net.spidleweb.prompt-enhancer/`. The workflow keeps only the 20 most recent runs, because each one includes the text you selected.
 
 ## Build a release
 
@@ -68,7 +64,7 @@ The model IDs are listed at the top of `enhance.zsh` in the workflow folder. To 
 ./build.sh
 ```
 
-This checks the workflow and writes `dist/Prompt-Enhancer-<version>.alfredworkflow`. The version comes from `workflow/info.plist`.
+The script checks the workflow and writes `dist/Prompt-Enhancer-<version>.alfredworkflow`, taking the version from `workflow/info.plist`.
 
 ## License
 
