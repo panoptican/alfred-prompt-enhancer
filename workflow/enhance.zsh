@@ -155,7 +155,7 @@ if [[ "${1:-}" == "--run" ]]; then
   if (( ok )) && [[ -s "$output_file" && -z "$api_error" ]]; then
     pbcopy < "$output_file"
     words="$(/usr/bin/wc -w < "$output_file" | /usr/bin/tr -d ' ')"
-    notify "Prompt enhanced" "$PE_MODE: $words words copied to the clipboard."
+    notify "Prompt enhanced" "$words words for $PE_MODE are on your clipboard."
     /usr/bin/afplay /System/Library/Sounds/Glass.aiff >/dev/null 2>&1 || true
   else
     detail="$api_error"
@@ -214,7 +214,7 @@ if (( ${#old_jobs} > keep_jobs )); then
   rm -rf -- "${(@)old_jobs[keep_jobs+1,-1]}"
 fi
 
-notify "Prompt enhancement started" "$mode. The result will be copied when it's ready."
+notify "Prompt enhancement started" "Rewriting for $mode. The prompt will be on your clipboard when it's ready."
 
 # Node-based CLIs find their own Node through PATH, so put the CLI's folder first.
 PATH="${bin:h}:$PATH" PE_MODE="$mode" PE_PROVIDER="$provider" PE_MODEL="${MODEL[$mode]}" PE_EFFORT="$effort" PE_BIN="$bin" \

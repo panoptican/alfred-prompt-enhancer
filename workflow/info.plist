@@ -564,13 +564,13 @@ exec /bin/zsh ./enhance.zsh "$1"
 		</dict>
 	</array>
 	<key>readme</key>
-	<string>Rewrite selected text, such as rough dictation, into a clear prompt for a specific Claude or GPT model. The result is copied to your clipboard.
+	<string>Prompt Enhancer turns rough text, such as dictation, into a clear prompt for a specific Claude or GPT model and copies it to your clipboard.
 
-Select text anywhere, open Universal Actions, and pick a "PE:" action for the model you'll paste into. You'll get a notification when the prompt is ready.
+Select text in any app, open Universal Actions, and choose the "PE:" action for the model you'll paste into. A notification tells you when the prompt is ready.
 
-Needs Claude Code (for the Claude actions) or the Codex CLI (for the GPT actions), installed and signed in, with access to those models.
+The Claude actions need Claude Code and the GPT actions need the Codex CLI. Each must be installed and signed in, with access to the models you use.
 
-Settings are all optional. A file in your templates folder with the same name as a bundled template (for example sonnet-5-5.md) replaces it.</string>
+All settings are optional. A file in your templates folder replaces the bundled template with the same name, such as sonnet-5-5.md.</string>
 	<key>uidata</key>
 	<dict>
 		<key>03A8CDA3-AA06-510B-89C7-46DB611B2BC4</key>
@@ -717,7 +717,7 @@ Settings are all optional. A file in your templates folder with the same name as
 				</array>
 			</dict>
 			<key>description</key>
-			<string>How much the model thinks before rewriting. Medium is a good balance of speed and quality.</string>
+			<string>How much the model thinks before rewriting. Medium balances speed and quality.</string>
 			<key>label</key>
 			<string>Effort</string>
 			<key>type</key>
@@ -738,7 +738,7 @@ Settings are all optional. A file in your templates folder with the same name as
 				<true/>
 			</dict>
 			<key>description</key>
-			<string>Optional. A short phrase about you, so prompts fit your role and voice.</string>
+			<string>Optional. A short description of yourself, so prompts fit your role and voice.</string>
 			<key>label</key>
 			<string>About you</string>
 			<key>type</key>
@@ -759,7 +759,7 @@ Settings are all optional. A file in your templates folder with the same name as
 				<true/>
 			</dict>
 			<key>description</key>
-			<string>Optional. Comma-separated names your dictation often gets wrong.</string>
+			<string>Optional. A comma-separated list of names your dictation tends to get wrong.</string>
 			<key>label</key>
 			<string>Misheard names</string>
 			<key>type</key>
@@ -780,7 +780,7 @@ Settings are all optional. A file in your templates folder with the same name as
 				<false/>
 			</dict>
 			<key>description</key>
-			<string>Optional. A folder of your own templates. A file named like a bundled one (e.g. opus-5-5.md) replaces it.</string>
+			<string>Optional. A folder of your own templates. A file named like a bundled template, such as opus-5-5.md, replaces it.</string>
 			<key>label</key>
 			<string>Templates folder</string>
 			<key>type</key>
