@@ -37,7 +37,7 @@ The rewrite runs in the background, so you can keep working. Most rewrites take 
 Open Alfred Preferences → Workflows → Prompt Enhancer → **Configure Workflow**.
 
 - **Effort**: how much the model thinks before rewriting. Low, Medium (default) or High.
-- **About you**: a short phrase such as "a designer who writes some code". It helps prompts match your role and voice.
+- **About you**: a short phrase such as "a backend developer who works mostly in Python". It helps prompts match your role and voice.
 - **Misheard names**: comma-separated names your dictation often gets wrong, such as "Figma, Raycast, Supabase". The rewrite uses them to fix mis-transcriptions.
 - **Templates folder**: a folder of your own templates (see below).
 

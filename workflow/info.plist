@@ -731,7 +731,7 @@ Settings are all optional. A file in your templates folder with the same name as
 				<key>default</key>
 				<string></string>
 				<key>placeholder</key>
-				<string>e.g. a designer who writes some code</string>
+				<string>e.g. a backend developer who works mostly in Python</string>
 				<key>required</key>
 				<false/>
 				<key>trim</key>
