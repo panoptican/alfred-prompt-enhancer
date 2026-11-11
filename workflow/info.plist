@@ -349,7 +349,7 @@
 				<key>acceptsurls</key>
 				<false/>
 				<key>name</key>
-				<string>PE: Claude Fable 5.1</string>
+				<string>PE: Claude Fable 5.2</string>
 			</dict>
 			<key>type</key>
 			<string>alfred.workflow.trigger.universalaction</string>
@@ -368,7 +368,7 @@
 				<key>variables</key>
 				<dict>
 					<key>ENHANCER_MODE</key>
-					<string>fable-5-1</string>
+					<string>fable-5-2</string>
 				</dict>
 			</dict>
 			<key>type</key>

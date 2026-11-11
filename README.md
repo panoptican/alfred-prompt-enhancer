@@ -4,7 +4,7 @@ Prompt Enhancer turns rough text into a clear prompt for the model you're about 
 
 I built it because I dictate most of my prompts, and dictation comes out as a ramble full of false starts and self-corrections. The workflow keeps what I meant and drops the rest. It holds on to the request itself, so a question stays a question and a review doesn't turn into a fix. When a fact that would change the result is missing, such as which project or where the output should go, it leaves a short bracketed question in the prompt, like `[which prototype?]`, so I can fill it in before I paste.
 
-Each action uses a template written for that model. The workflow includes Claude Opus 5.5, Sonnet 5.5, Haiku 5.5 and Fable 5.1, and GPT 6.1 Sol, GPT 6 Luna and GPT 6 Astra.
+Each action uses a template written for that model. The workflow includes Claude Opus 5.5, Sonnet 5.5, Haiku 5.5 and Fable 5.2, and GPT 6.1 Sol, GPT 6 Luna and GPT 6 Astra.
 
 ## Requirements
 
@@ -38,7 +38,7 @@ All settings are optional. To change them later, open Alfred Preferences, select
 
 ## Templates
 
-Each action has a bundled template in the workflow's `templates` folder: `opus-5-5.md`, `sonnet-5-5.md`, `haiku-5-5.md`, `fable-5-1.md`, `gpt-6.1-sol.md`, `gpt-6-luna.md` and `gpt-6-astra.md`.
+Each action has a bundled template in the workflow's `templates` folder: `opus-5-5.md`, `sonnet-5-5.md`, `haiku-5-5.md`, `fable-5-2.md`, `gpt-6.1-sol.md`, `gpt-6-luna.md` and `gpt-6-astra.md`.
 
 To change a template, copy it into your templates folder and edit the copy without renaming it. The workflow uses your copy instead of the bundled one, and updating the workflow leaves your copy alone.
 
@@ -51,6 +51,10 @@ Two lines in each template come from your settings. `{{ABOUT_USER}}` becomes "Ab
 The model IDs are listed at the top of `enhance.zsh` in the workflow folder. To move an action to a newer model, change its ID there.
 
 Adding a model takes three matching pieces: a line in that list, a template named after the new mode, and a Universal Action that sets `ENHANCER_MODE` to the mode.
+
+The workflow keeps one action per model family. When a new version replaces an older one, such as Fable 5.2 replacing Fable 5.1, the old action becomes the new one. It keeps its place in Alfred and gets the new name and a template written for the new version. The old template moves to `archive/templates/` in this repository and no longer ships with the workflow.
+
+If you had your own copy of the old template in your templates folder, the workflow stops using it after the update, because its name no longer matches an action. Copy the new bundled template into your folder and make your changes again.
 
 ## Troubleshooting
 

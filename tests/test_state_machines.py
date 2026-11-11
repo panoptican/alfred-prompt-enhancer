@@ -111,7 +111,7 @@ else: print(text,end='')
                    ('|Prompt enhanced\n', '|Prompt enhancement failed\n', '|Prompt enhancement superseded\n')))
 
     def test_all_modes(self):
-        for mode in ('opus-5-5','sonnet-5-5','haiku-5-5','fable-5-1','gpt-6.1-sol','gpt-6-luna','gpt-6-astra'):
+        for mode in ('opus-5-5','sonnet-5-5','haiku-5-5','fable-5-2','gpt-6.1-sol','gpt-6-luna','gpt-6-astra'):
             with self.subTest(mode=mode):
                 self.events.unlink(missing_ok=True)
                 self.assertEqual(self.launch(ENHANCER_MODE=mode).returncode, 0)

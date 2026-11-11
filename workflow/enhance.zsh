@@ -14,7 +14,7 @@ typeset -A PROVIDER MODEL
 PROVIDER[opus-5-5]=claude;      MODEL[opus-5-5]=claude-opus-5-5
 PROVIDER[sonnet-5-5]=claude;    MODEL[sonnet-5-5]=claude-sonnet-5-5
 PROVIDER[haiku-5-5]=claude;     MODEL[haiku-5-5]=claude-haiku-5-5
-PROVIDER[fable-5-1]=claude;     MODEL[fable-5-1]=claude-fable-5-1
+PROVIDER[fable-5-2]=claude;     MODEL[fable-5-2]=claude-fable-5-2
 PROVIDER[gpt-6.1-sol]=codex;    MODEL[gpt-6.1-sol]=gpt-6.1-sol
 PROVIDER[gpt-6-luna]=codex;     MODEL[gpt-6-luna]=gpt-6-luna
 PROVIDER[gpt-6-astra]=codex;    MODEL[gpt-6-astra]=gpt-6-astra
