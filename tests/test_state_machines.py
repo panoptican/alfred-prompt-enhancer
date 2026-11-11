@@ -182,7 +182,8 @@ else: print(text,end='')
         self.launch(GATE=str(gate))
         self.wait(lambda: gate.with_suffix('.ready').exists())
         active = next(self.cache.glob('job-*'))
-        os.utime(active, (1,1))
+        hour_ago = time.time() - 3600
+        os.utime(active, (hour_ago, hour_ago))
         for n in range(20):
             job = self.cache / f'job-20000102-{n}'
             job.mkdir()
@@ -226,6 +227,20 @@ else: print(text,end='')
         self.assertIn("Claude didn't respond", self.events.read_text())
         job = next(self.cache.glob('job-*'))
         self.assert_dead([int(pid) for pid in (job/'hung.pids').read_text().split()])
+
+    def test_stale_unfinished_jobs_are_pruned(self):
+        stale = self.cache/'job-20000101-000000-stale'
+        fresh = self.cache/'job-20000101-000000-fresh'
+        for job in (stale, fresh):
+            job.mkdir(parents=True)
+            (job/'selected.txt').write_text('private text')
+        two_days_ago = time.time() - 2*86400
+        os.utime(stale, (two_days_ago, two_days_ago))
+        self.launch()
+        self.finished()
+        self.wait(lambda: len(list(self.cache.glob('job-*/completed'))) == 1)
+        self.assertFalse(stale.exists(), 'an abandoned job was kept')
+        self.assertTrue(fresh.exists(), 'a job that may still be running was deleted')
 
     def test_latest_accepted_job_owns_clipboard(self):
         older, newer = self.root/'older', self.root/'newer'

@@ -122,12 +122,19 @@ lock_cache() {
 }
 unlock_cache() { zsystem flock -u "$lock_fd"; }
 
+# Keep the newest finished jobs. A job without a completed marker may still be
+# running, unless it is older than a day: the deadline ends every worker within
+# minutes, so such a job's worker died (killed, shutdown) and it never finishes.
 prune_jobs() {
-  local -a completed_jobs
+  local -a completed_jobs abandoned_jobs
   local candidate
   completed_jobs=()
   for candidate in "$cache_dir"/job-*(N/om); do
     [[ -f "$candidate/completed" ]] && completed_jobs+=("$candidate")
+  done
+  abandoned_jobs=("$cache_dir"/job-*(N/mh+24))
+  for candidate in "${abandoned_jobs[@]}"; do
+    [[ -f "$candidate/completed" ]] || rm -rf -- "$candidate"
   done
   if (( ${#completed_jobs} > keep_jobs )); then
     rm -rf -- "${(@)completed_jobs[keep_jobs+1,-1]}"
