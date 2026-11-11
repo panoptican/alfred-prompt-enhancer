@@ -35,3 +35,10 @@ Keep the old action next to the new one only when some users can't reach the new
 - To check a mode end to end, run the script the way Alfred does, from `workflow/`:
   `ENHANCER_MODE=sonnet-5-5 alfred_workflow_bundleid=net.spidleweb.prompt-enhancer zsh enhance.zsh "some test text"`
   The result goes to the clipboard and the job folder under the cache directory.
+
+## Releasing and the maintainer's own install
+
+This repository is the only source. The maintainer's own Alfred install is the built workflow, not a separate copy, so one change updates both.
+
+- To update the install, run `./build.sh` and open the new file in `dist/`. Alfred imports it over the installed version (same bundle ID) and keeps its settings.
+- Personal details go only in the workflow's settings (About you, Misheard names), which Alfred stores in the installed workflow's `prefs.plist`, or in the templates folder. They never go in this repository.
