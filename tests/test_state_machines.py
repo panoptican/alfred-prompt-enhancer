@@ -185,8 +185,10 @@ else: print(text,end='')
         survived = active.exists()
         gate.touch()
         self.assertTrue(survived, 'cleanup deleted an active job')
-        self.wait(lambda: (active/'completed').exists())
-        self.assertLessEqual(len(list(self.cache.glob('job-*/completed'))),20)
+        # The worker writes its marker, then prunes under the same lock, so
+        # wait for both instead of counting in between.
+        self.wait(lambda: (active/'completed').exists() and
+                  len(list(self.cache.glob('job-*/completed'))) <= 20)
 
     def test_latest_accepted_job_owns_clipboard(self):
         older, newer = self.root/'older', self.root/'newer'
