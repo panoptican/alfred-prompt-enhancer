@@ -25,7 +25,7 @@ The Claude actions run through [Claude Code](https://claude.com/claude-code) and
 3. Choose the action for the model you'll paste into, such as "PE: Claude Sonnet 5.5".
 4. Paste when the "Prompt enhanced" notification appears.
 
-The rewrite runs in the background, so you can keep working while it finishes. Most take somewhere between a few seconds and half a minute.
+The rewrite runs in the background, so you can keep working while it finishes. Most take somewhere between a few seconds and half a minute. If you start another request, only the latest accepted request can update your clipboard, even if it fails. Older results are saved in the cache and reported as superseded.
 
 ## Settings
 
@@ -58,7 +58,7 @@ If a notification says Claude Code or Codex isn't installed or isn't signed in, 
 
 If the CLI is installed but the workflow can't find it, the cause is usually Alfred's limited PATH. The workflow already checks the same locations your login shell uses. If it still fails, open the workflow in Alfred Preferences, choose the `[x]` button to add an environment variable, and set `CLAUDE_BIN` or `CODEX_BIN` to the CLI's full path.
 
-Each run saves its request, output and any errors in Alfred's workflow cache, at `~/Library/Caches/com.runningwithcrayons.Alfred/Workflow Data/net.spidleweb.prompt-enhancer/`. The workflow keeps only the 20 most recent runs, because each one includes the text you selected.
+Each run saves its request, output and any errors in Alfred's workflow cache, at `~/Library/Caches/com.runningwithcrayons.Alfred/Workflow Data/net.spidleweb.prompt-enhancer/`. The workflow keeps the 20 most recently completed runs, plus unfinished runs, because each one includes the text you selected. Unfinished runs are preserved so cleanup cannot delete a job while it is working.
 
 ## Build a release
 

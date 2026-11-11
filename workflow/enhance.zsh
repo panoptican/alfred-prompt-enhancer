@@ -26,6 +26,7 @@ script_path="${0:A}"
 workflow_dir="${script_path:h}"
 bundle_id="${alfred_workflow_bundleid:-net.spidleweb.prompt-enhancer}"
 cache_dir="${alfred_workflow_cache:-$HOME/Library/Caches/$bundle_id}"
+cache_dir="${cache_dir:A}"
 keep_jobs=20
 
 notify() {
@@ -109,15 +110,59 @@ HEADER
   printf '\n</selected_text>\n'
 }
 
+# Registration, publication and retention share one lock. Kernel locks release
+# even when a process dies; never remove the lock file while jobs may use it.
+zmodload zsh/system
+lock_cache() {
+  : >> "$cache_dir/.lock"
+  zsystem flock -t 10 -f lock_fd "$cache_dir/.lock"
+}
+unlock_cache() { zsystem flock -u "$lock_fd"; }
+
+prune_jobs() {
+  local -a completed_jobs
+  local candidate
+  completed_jobs=()
+  for candidate in "$cache_dir"/job-*(N/om); do
+    [[ -f "$candidate/completed" ]] && completed_jobs+=("$candidate")
+  done
+  if (( ${#completed_jobs} > keep_jobs )); then
+    rm -rf -- "${(@)completed_jobs[keep_jobs+1,-1]}"
+  fi
+  return 0
+}
+
+# Only a leading provider error is an error envelope, not a quoted substring.
+output_error() {
+  [[ -s "$output_file" ]] && grep -q '^API Error:' "$output_file"
+}
+
+finish_job() {
+  if [[ "$terminal_state" == failed && "$terminal_notified" == 0 ]]; then
+    notify "Prompt enhancement failed" "$PE_MODE: The worker stopped before completing. See the job logs."
+  fi
+  if lock_cache; then
+    print -r -- "$terminal_state" > "$job_dir/completed"
+    prune_jobs
+    unlock_cache
+  fi
+}
+
 # ---------------------------------------------------------------------------
 # Background phase: run the model, copy the result, notify.
 # ---------------------------------------------------------------------------
-if [[ "${1:-}" == "--run" ]]; then
-  job_dir="$2"
+if [[ $# == 2 && "${1:-}" == "--run" ]]; then
+  job_dir="${2:A}"
   request_file="$job_dir/request.md"
   output_file="$job_dir/output.txt"
   stderr_file="$job_dir/stderr.log"
+  terminal_state=failed
+  terminal_notified=0
+  trap finish_job EXIT
+  trap 'exit 1' HUP INT TERM
   cd "$job_dir"
+  # A replay must never reuse an earlier result if the CLI writes nothing.
+  : > "$output_file"
 
   ok=1
   if [[ "$PE_PROVIDER" == "claude" ]]; then
@@ -126,7 +171,12 @@ if [[ "${1:-}" == "--run" ]]; then
       if "$PE_BIN" --print --model "$PE_MODEL" --permission-mode plan \
           --output-format text --effort "$PE_EFFORT" \
           < "$request_file" > "$output_file" 2> "$stderr_file"; then
-        ok=1; break
+        ok=1
+      else
+        ok=0
+      fi
+      if (( ok )) && ! output_error; then
+        break
       fi
       ok=0
       # Retry only when the API is busy.
@@ -148,21 +198,33 @@ if [[ "${1:-}" == "--run" ]]; then
 
   # Claude Code prints API errors to stdout, so don't copy those as a result.
   api_error=""
-  if [[ -s "$output_file" ]] && grep -q "API Error:" "$output_file"; then
+  if [[ -s "$output_file" ]] && grep -q '^API Error:' "$output_file"; then
     api_error="$(head -1 "$output_file")"
   fi
 
-  if (( ok )) && [[ -s "$output_file" && -z "$api_error" ]]; then
-    pbcopy < "$output_file"
-    words="$(/usr/bin/wc -w < "$output_file" | /usr/bin/tr -d ' ')"
-    notify "Prompt enhanced" "$words words for $PE_MODE are on your clipboard."
-    /usr/bin/afplay /System/Library/Sounds/Glass.aiff >/dev/null 2>&1 || true
+  if (( ok )) && [[ -z "$api_error" ]] && grep -q '[^[:space:]]' "$output_file"; then
+    lock_cache || fail "Could not lock the clipboard publication state."
+    if [[ "$(< "$cache_dir/latest")" != "$job_dir" ]]; then
+      terminal_state=superseded
+      notify "Prompt enhancement superseded" "$PE_MODE: A newer request owns the clipboard. This result is saved in the job folder."
+    elif pbcopy < "$output_file"; then
+      terminal_state=succeeded
+      words="$(/usr/bin/wc -w < "$output_file" | /usr/bin/tr -d ' ')"
+      notify "Prompt enhanced" "$words words for $PE_MODE are on your clipboard."
+      /usr/bin/afplay /System/Library/Sounds/Glass.aiff >/dev/null 2>&1 || true
+    else
+      notify "Prompt enhancement failed" "$PE_MODE: Could not copy the result to the clipboard. It is saved in the job folder."
+      terminal_notified=1
+    fi
+    unlock_cache
   else
     detail="$api_error"
     [[ -z "$detail" && -s "$stderr_file" ]] && detail="$(tail -3 "$stderr_file" | tr '\n' ' ')"
     [[ -z "$detail" ]] && detail="The model returned nothing."
     notify "Prompt enhancement failed" "$PE_MODE: $detail"
+    terminal_notified=1
   fi
+  [[ "$terminal_state" != failed ]] || exit 1
   exit 0
 fi
 
@@ -192,27 +254,34 @@ fi
 if [[ "$provider" == "claude" ]]; then
   bin="${CLAUDE_BIN:-$(find_cli claude)}"
   [[ -n "$bin" ]] || fail "Claude Code isn't installed. Install it from claude.com/claude-code."
-  if "$bin" auth status --json 2>/dev/null | grep -Eq '"loggedIn": *false'; then
+  [[ -x "$bin" ]] || fail "Claude Code executable not found: $bin"
+  bin="${bin:a}"
+  if ! auth_json="$("$bin" auth status --json 2>/dev/null)" ||
+      ! print -r -- "$auth_json" | grep -Eq '"loggedIn":[[:space:]]*true'; then
     fail "Claude Code isn't signed in. Run 'claude auth login' in Terminal."
   fi
 else
   bin="${CODEX_BIN:-$(find_cli codex)}"
   [[ -n "$bin" ]] || fail "The Codex CLI isn't installed. Install it with 'npm install -g @openai/codex'."
+  [[ -x "$bin" ]] || fail "Codex executable not found: $bin"
+  bin="${bin:a}"
   "$bin" login status >/dev/null 2>&1 || fail "Codex isn't signed in. Run 'codex login' in Terminal."
 fi
 
-mkdir -p "$cache_dir"
-job_dir="$cache_dir/job-$(date +%Y%m%d-%H%M%S)-$$"
-mkdir -p "$job_dir"
+mkdir -p "$cache_dir" || fail "Could not create the workflow cache."
+# A private, unique directory also prevents two requests from sharing files.
+umask 077
+job_dir="$(mktemp -d "$cache_dir/job-$(date +%Y%m%d-%H%M%S)-XXXXXX")"
 printf '%s' "$selected_text" > "$job_dir/selected.txt"
 build_request "$template" "$job_dir/selected.txt" > "$job_dir/request.md"
 print -r -- "mode=$mode provider=$provider model=${MODEL[$mode]} effort=$effort template=$template bin=$bin" > "$job_dir/job.log"
 
-# Each job keeps a copy of the selected text, so only the newest few are kept.
-old_jobs=( "$cache_dir"/job-*(N/om) )
-if (( ${#old_jobs} > keep_jobs )); then
-  rm -rf -- "${(@)old_jobs[keep_jobs+1,-1]}"
-fi
+# A job becomes accepted only after its request is complete. Later accepted
+# requests supersede earlier ones even if the later model ultimately fails.
+lock_cache || fail "Could not register the request."
+print -r -- "$job_dir" > "$cache_dir/latest"
+prune_jobs
+unlock_cache
 
 notify "Prompt enhancement started" "Rewriting for $mode. The prompt will be on your clipboard when it's ready."
 
