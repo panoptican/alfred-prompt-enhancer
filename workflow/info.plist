@@ -568,7 +568,7 @@ exec /bin/zsh ./enhance.zsh "$1"
 
 Select text in any app, open Universal Actions, and choose the "PE:" action for the model you'll paste into. A notification tells you when the prompt is ready.
 
-The Claude actions need Claude Code and the GPT actions need the Codex CLI. Each must be installed and signed in, with access to the models you use.
+The Claude actions need Claude Code and the GPT actions need the Codex CLI. Each must be installed and signed in, with access to the models you use. Rewrites use the account the CLI is signed in to, so they count toward your Claude or ChatGPT plan's usage limits, or are billed to your API key.
 
 All settings are optional. A file in your templates folder replaces the bundled template with the same name, such as sonnet-5-5.md.</string>
 	<key>uidata</key>

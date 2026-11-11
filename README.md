@@ -12,6 +12,8 @@ You need macOS with [Alfred 5](https://www.alfredapp.com) and the Powerpack, whi
 
 The Claude actions run through [Claude Code](https://claude.com/claude-code) and the GPT actions run through the [Codex CLI](https://github.com/openai/codex). Install the one you plan to use, sign in with `claude auth login` or `codex login`, and make sure your account has access to those models.
 
+The workflow doesn't call any model API itself. Each rewrite runs through that CLI on your Mac, using whatever account the CLI is signed in to. If you signed in with a Claude or ChatGPT subscription, rewrites count toward that plan's usage limits like any other session. If the CLI uses an API key instead, each rewrite is billed to that key.
+
 ## Install
 
 1. Download `Prompt-Enhancer-<version>.alfredworkflow` from the latest release.
