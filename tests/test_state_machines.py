@@ -54,6 +54,13 @@ if os.environ.get('GATE'):
  gate.with_suffix('.ready').touch()
  while not gate.exists(): time.sleep(.01)
 behavior=os.environ.get('BEHAVIOR','ok')
+if behavior == 'hang':
+ # A hung CLI with a child, like Node workers; both must die on timeout.
+ import signal,subprocess
+ if os.environ.get('IGNORE_TERM'): signal.signal(signal.SIGTERM, signal.SIG_IGN)
+ child=subprocess.Popen([sys.executable,'-c','import os,signal,time\\nif os.environ.get("IGNORE_TERM"): signal.signal(signal.SIGTERM, signal.SIG_IGN)\\ntime.sleep(600)'])
+ pathlib.Path('hung.pids').write_text(f'{os.getpid()} {child.pid}')
+ time.sleep(600)
 if behavior in ('busy','busy-zero') and n < int(os.environ.get('SUCCEED_AT','3')):
  print('API Error: 529 overloaded')
  sys.exit(0 if behavior == 'busy-zero' else 1)
@@ -189,6 +196,36 @@ else: print(text,end='')
         # wait for both instead of counting in between.
         self.wait(lambda: (active/'completed').exists() and
                   len(list(self.cache.glob('job-*/completed'))) <= 20)
+
+    def assert_dead(self, pids):
+        def gone(pid):
+            try: os.kill(pid, 0)
+            except ProcessLookupError: return True
+            return False
+        self.wait(lambda: all(gone(pid) for pid in pids))
+
+    def test_hung_cli_is_killed(self):
+        for mode, name in (('sonnet-5-5', 'Claude'), ('gpt-6.1-sol', 'Codex')):
+            with self.subTest(mode=mode):
+                self.events.unlink(missing_ok=True)
+                self.launch(ENHANCER_MODE=mode, BEHAVIOR='hang', ENHANCER_TIMEOUT='1')
+                self.finished()
+                events = self.events.read_text()
+                self.assertIn(f"{name} didn't respond within 1 second", events)
+                self.assertFalse(self.clip.exists())
+                job = max(self.cache.glob('job-*/hung.pids')).parent
+                self.wait(lambda: (job/'completed').exists())
+                self.assertEqual((job/'completed').read_text().strip(), 'failed')
+                self.assertEqual((job/'attempts').read_text(), '1', 'a timeout is not retried')
+                self.assert_dead(int(pid) for pid in (job/'hung.pids').read_text().split())
+                for old in self.cache.glob('job-*'): shutil.rmtree(old)
+
+    def test_cli_ignoring_term_is_killed(self):
+        self.launch(BEHAVIOR='hang', IGNORE_TERM='1', ENHANCER_TIMEOUT='1')
+        self.finished()
+        self.assertIn("Claude didn't respond", self.events.read_text())
+        job = next(self.cache.glob('job-*'))
+        self.assert_dead([int(pid) for pid in (job/'hung.pids').read_text().split()])
 
     def test_latest_accepted_job_owns_clipboard(self):
         older, newer = self.root/'older', self.root/'newer'

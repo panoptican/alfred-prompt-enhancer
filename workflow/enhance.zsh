@@ -28,6 +28,9 @@ bundle_id="${alfred_workflow_bundleid:-net.spidleweb.prompt-enhancer}"
 cache_dir="${alfred_workflow_cache:-$HOME/Library/Caches/$bundle_id}"
 cache_dir="${cache_dir:A}"
 keep_jobs=20
+# A rewrite normally takes a few seconds to about 30. After this many seconds,
+# including Claude's busy retries, the CLI is stopped and the run fails.
+default_timeout=180
 
 notify() {
   local title="$1" message="${2:-}"
@@ -132,12 +135,61 @@ prune_jobs() {
   return 0
 }
 
+# Run a CLI with a deadline (epoch seconds). Redirections given to the call
+# apply to the CLI. perl starts it in its own process group so a timeout also
+# stops the Node processes it spawned. Returns 124 when the deadline passed.
+zmodload zsh/datetime zsh/zselect
+run_with_deadline() {
+  local deadline="$1"; shift
+  if [[ -x /usr/bin/perl ]]; then
+    /usr/bin/perl -e 'setpgrp(0, 0); exec { $ARGV[0] } @ARGV or exit 127' "$@" &
+  else
+    "$@" &
+  fi
+  cli_pid=$!
+  while kill -0 "$cli_pid" 2>/dev/null; do
+    if (( EPOCHREALTIME >= deadline )); then
+      stop_cli TERM
+      local grace=$(( EPOCHREALTIME + 2 ))
+      while kill -0 "$cli_pid" 2>/dev/null && (( EPOCHREALTIME < grace )); do
+        zselect -t 10 || true
+      done
+      stop_cli KILL
+      wait "$cli_pid" 2>/dev/null || true
+      cli_pid=""
+      timed_out=1
+      return 124
+    fi
+    # zselect waits without an external process; 10 is a tenth of a second.
+    zselect -t 10 || true
+  done
+  local cli_status=0
+  wait "$cli_pid" || cli_status=$?
+  cli_pid=""
+  return "$cli_status"
+}
+
+stop_cli() {
+  [[ -n "${cli_pid:-}" ]] || return 0
+  kill "-$1" -- "-$cli_pid" 2>/dev/null ||
+    { pkill "-$1" -P "$cli_pid" 2>/dev/null; kill "-$1" "$cli_pid" 2>/dev/null; } || true
+}
+
+# "3 minutes", "1 second": how long the run was given, for the notification.
+describe_seconds() {
+  local n="$1" unit=second
+  (( n % 60 == 0 )) && { n=$(( n / 60 )); unit=minute; }
+  (( n == 1 )) && print -r -- "$n $unit" || print -r -- "$n ${unit}s"
+}
+
 # Only a leading provider error is an error envelope, not a quoted substring.
 output_error() {
   [[ -s "$output_file" ]] && grep -q '^API Error:' "$output_file"
 }
 
 finish_job() {
+  # Exiting early (a signal) must not leave the CLI running.
+  stop_cli KILL
   if [[ "$terminal_state" == failed && "$terminal_notified" == 0 ]]; then
     notify "Prompt enhancement failed" "$PE_MODE: The worker stopped before completing. See the job logs."
   fi
@@ -158,6 +210,12 @@ if [[ $# == 2 && "${1:-}" == "--run" ]]; then
   stderr_file="$job_dir/stderr.log"
   terminal_state=failed
   terminal_notified=0
+  cli_pid=""
+  timed_out=0
+  timeout="${PE_TIMEOUT:-$default_timeout}"
+  [[ "$timeout" == <1-> ]] || timeout=$default_timeout
+  # One deadline covers every attempt, so the worker always ends soon after it.
+  deadline=$(( EPOCHSECONDS + timeout ))
   trap finish_job EXIT
   trap 'exit 1' HUP INT TERM
   cd "$job_dir"
@@ -168,7 +226,7 @@ if [[ $# == 2 && "${1:-}" == "--run" ]]; then
   if [[ "$PE_PROVIDER" == "claude" ]]; then
     delay=10
     for attempt in 0 1 2; do
-      if "$PE_BIN" --print --model "$PE_MODEL" --permission-mode plan \
+      if run_with_deadline "$deadline" "$PE_BIN" --print --model "$PE_MODEL" --permission-mode plan \
           --output-format text --effort "$PE_EFFORT" \
           < "$request_file" > "$output_file" 2> "$stderr_file"; then
         ok=1
@@ -179,8 +237,10 @@ if [[ $# == 2 && "${1:-}" == "--run" ]]; then
         break
       fi
       ok=0
-      # Retry only when the API is busy.
-      if (( attempt < 2 )) && grep -Eqi "API Error: 529|overloaded|too many requests" "$output_file" "$stderr_file" 2>/dev/null; then
+      # Retry only when the API is busy and the deadline leaves room. A timeout
+      # is not a busy signal, and the deadline is already spent anyway.
+      (( timed_out )) && break
+      if (( attempt < 2 && EPOCHSECONDS + delay < deadline )) && grep -Eqi "API Error: 529|overloaded|too many requests" "$output_file" "$stderr_file" 2>/dev/null; then
         notify "Prompt enhancement" "Claude is busy. Retrying in ${delay}s…"
         sleep "$delay"; delay=$(( delay * 2 ))
       else
@@ -188,7 +248,7 @@ if [[ $# == 2 && "${1:-}" == "--run" ]]; then
       fi
     done
   else
-    "$PE_BIN" exec --ephemeral --skip-git-repo-check --sandbox read-only --color never \
+    run_with_deadline "$deadline" "$PE_BIN" exec --ephemeral --skip-git-repo-check --sandbox read-only --color never \
       -c 'web_search="disabled"' \
       -c "model_reasoning_effort=\"$PE_EFFORT\"" \
       -c 'model_verbosity="low"' \
@@ -217,6 +277,10 @@ if [[ $# == 2 && "${1:-}" == "--run" ]]; then
       terminal_notified=1
     fi
     unlock_cache
+  elif (( timed_out )); then
+    name=Claude; [[ "$PE_PROVIDER" == claude ]] || name=Codex
+    notify "Prompt enhancement failed" "$PE_MODE: $name didn't respond within $(describe_seconds "$timeout"). Try again in a moment."
+    terminal_notified=1
   else
     detail="$api_error"
     [[ -z "$detail" && -s "$stderr_file" ]] && detail="$(tail -3 "$stderr_file" | tr '\n' ' ')"
@@ -238,6 +302,9 @@ selected_text="${1:-}"
 mode="${ENHANCER_MODE:-}"
 [[ -n "$mode" && -n "${PROVIDER[$mode]:-}" ]] || fail "Unknown mode '$mode'."
 provider="${PROVIDER[$mode]}"
+
+timeout="${ENHANCER_TIMEOUT:-$default_timeout}"
+[[ "$timeout" == <1-> ]] || timeout=$default_timeout
 
 effort="${effort:-medium}"
 [[ "$effort" == (low|medium|high) ]] || effort="medium"
@@ -286,5 +353,5 @@ unlock_cache
 notify "Prompt enhancement started" "Rewriting for $mode. The prompt will be on your clipboard when it's ready."
 
 # Node-based CLIs find their own Node through PATH, so put the CLI's folder first.
-PATH="${bin:h}:$PATH" PE_MODE="$mode" PE_PROVIDER="$provider" PE_MODEL="${MODEL[$mode]}" PE_EFFORT="$effort" PE_BIN="$bin" \
+PATH="${bin:h}:$PATH" PE_MODE="$mode" PE_PROVIDER="$provider" PE_MODEL="${MODEL[$mode]}" PE_EFFORT="$effort" PE_TIMEOUT="$timeout" PE_BIN="$bin" \
   nohup /bin/zsh "$script_path" --run "$job_dir" >/dev/null 2>&1 &!
