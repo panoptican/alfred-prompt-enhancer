@@ -792,7 +792,7 @@ All settings are optional. A file in your templates folder replaces the bundled 
 	<key>variablesdontexport</key>
 	<array/>
 	<key>version</key>
-	<string>1.1.0</string>
+	<string>1.1.1</string>
 	<key>webaddress</key>
 	<string>https://spidleweb.net</string>
 </dict>
