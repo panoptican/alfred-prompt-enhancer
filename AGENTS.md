@@ -8,6 +8,8 @@ Shareable Alfred workflow that rewrites selected text into a prompt for a specif
   - `info.plist`: Alfred objects, Universal Actions, install settings, About text and version.
   - `enhance.zsh`: all the logic. The model list is at the top.
   - `templates/<mode>.md`: one template per mode.
+  - `icon.png`: rendered from `assets/icon.svg`. Alfred has no light or dark icon variants, so the icon has to show up on both light and dark notification banners.
+- `assets/icon.svg` is the icon's source. It doesn't ship. Render it with `resvg -w 256 -h 256 assets/icon.svg workflow/icon.png`.
 - `build.sh` checks the workflow and zips it into `dist/` (not committed).
 - `archive/templates/` holds templates for replaced models. They don't ship.
 
