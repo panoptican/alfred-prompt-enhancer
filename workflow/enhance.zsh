@@ -8,16 +8,17 @@
 # Alfred isn't blocked while the model works.
 set -euo pipefail
 
-# Models: mode, CLI, model ID. Each mode's template is templates/<mode>.md.
-# To move a mode to a newer model, change its ID here.
-typeset -A PROVIDER MODEL
-PROVIDER[opus-5-5]=claude;      MODEL[opus-5-5]=claude-opus-5-5
-PROVIDER[sonnet-5-5]=claude;    MODEL[sonnet-5-5]=claude-sonnet-5-5
-PROVIDER[haiku-5-5]=claude;     MODEL[haiku-5-5]=claude-haiku-5-5
-PROVIDER[fable-5-2]=claude;     MODEL[fable-5-2]=claude-fable-5-2
-PROVIDER[gpt-6.1-sol]=codex;    MODEL[gpt-6.1-sol]=gpt-6.1-sol
-PROVIDER[gpt-6-luna]=codex;     MODEL[gpt-6-luna]=gpt-6-luna
-PROVIDER[gpt-6-astra]=codex;    MODEL[gpt-6-astra]=gpt-6-astra
+# Models: mode, CLI, model ID and the name notifications show. Each mode's
+# template is templates/<mode>.md. To move a mode to a newer model, change its
+# ID here.
+typeset -A PROVIDER MODEL NAME
+PROVIDER[opus-5-5]=claude;      MODEL[opus-5-5]=claude-opus-5-5;      NAME[opus-5-5]="Claude Opus 5.5"
+PROVIDER[sonnet-5-5]=claude;    MODEL[sonnet-5-5]=claude-sonnet-5-5;  NAME[sonnet-5-5]="Claude Sonnet 5.5"
+PROVIDER[haiku-5-5]=claude;     MODEL[haiku-5-5]=claude-haiku-5-5;    NAME[haiku-5-5]="Claude Haiku 5.5"
+PROVIDER[fable-5-2]=claude;     MODEL[fable-5-2]=claude-fable-5-2;    NAME[fable-5-2]="Claude Fable 5.2"
+PROVIDER[gpt-6.1-sol]=codex;    MODEL[gpt-6.1-sol]=gpt-6.1-sol;       NAME[gpt-6.1-sol]="GPT 6.1 Sol"
+PROVIDER[gpt-6-luna]=codex;     MODEL[gpt-6-luna]=gpt-6-luna;         NAME[gpt-6-luna]="GPT 6 Luna"
+PROVIDER[gpt-6-astra]=codex;    MODEL[gpt-6-astra]=gpt-6-astra;       NAME[gpt-6-astra]="GPT 6 Astra"
 
 # Alfred starts scripts with a minimal PATH, so add the usual install locations.
 export PATH="$HOME/.local/bin:$HOME/.claude/local:/opt/homebrew/bin:/usr/local/bin:$HOME/.npm-global/bin:$HOME/.bun/bin:/usr/bin:/bin:/usr/sbin:/sbin"
@@ -213,7 +214,7 @@ finish_job() {
   # Exiting early (a signal) must not leave the CLI running.
   stop_cli KILL
   if [[ "$terminal_state" == failed && "$terminal_notified" == 0 ]]; then
-    notify "Prompt enhancement failed" "$PE_MODE: The worker stopped before completing. See the job logs."
+    notify "Prompt enhancement failed" "$PE_MODEL_NAME: The worker stopped before completing. See the job logs."
   fi
   if lock_cache; then
     print -r -- "$terminal_state" > "$job_dir/completed"
@@ -296,23 +297,23 @@ if [[ $# == 2 && "${1:-}" == "--run" ]]; then
     lock_cache || fail "Could not lock the clipboard publication state."
     if [[ "$(< "$cache_dir/latest")" != "$job_dir" ]]; then
       terminal_state=superseded
-      notify "Prompt enhancement superseded" "$PE_MODE: A newer request owns the clipboard. This result is saved in the job folder."
+      notify "Prompt enhancement superseded" "$PE_MODEL_NAME: A newer request owns the clipboard. This result is saved in the job folder."
     elif pbcopy < "$output_file"; then
       terminal_state=succeeded
       words="$(/usr/bin/wc -w < "$output_file" | /usr/bin/tr -d ' ')"
-      notify "Prompt enhanced" "$words words for $PE_MODE are on your clipboard."
+      notify "Prompt enhanced" "$words words for $PE_MODEL_NAME are on your clipboard."
       /usr/bin/afplay /System/Library/Sounds/Glass.aiff >/dev/null 2>&1 || true
     else
-      notify "Prompt enhancement failed" "$PE_MODE: Could not copy the result to the clipboard. It is saved in the job folder."
+      notify "Prompt enhancement failed" "$PE_MODEL_NAME: Could not copy the result to the clipboard. It is saved in the job folder."
       terminal_notified=1
     fi
     unlock_cache
   elif (( timed_out )); then
     name=Claude; [[ "$PE_PROVIDER" == claude ]] || name=Codex
-    notify "Prompt enhancement failed" "$PE_MODE: $name didn't respond within $(describe_seconds "$timeout"). Try again in a moment."
+    notify "Prompt enhancement failed" "$PE_MODEL_NAME: $name didn't respond within $(describe_seconds "$timeout"). Try again in a moment."
     terminal_notified=1
   else
-    notify "Prompt enhancement failed" "$PE_MODE: $(failure_reason)"
+    notify "Prompt enhancement failed" "$PE_MODEL_NAME: $(failure_reason)"
     terminal_notified=1
   fi
   [[ "$terminal_state" != failed ]] || exit 1
@@ -329,6 +330,7 @@ selected_text="${1:-}"
 mode="${ENHANCER_MODE:-}"
 [[ -n "$mode" && -n "${PROVIDER[$mode]:-}" ]] || fail "Unknown mode '$mode'."
 provider="${PROVIDER[$mode]}"
+model_name="${NAME[$mode]:-$mode}"
 
 timeout="${ENHANCER_TIMEOUT:-$default_timeout}"
 [[ "$timeout" == <1-> ]] || timeout=$default_timeout
@@ -384,7 +386,7 @@ print -r -- "$job_dir" > "$cache_dir/latest"
 prune_jobs
 unlock_cache
 
-notify "Prompt enhancement started" "Rewriting for $mode. The prompt will be on your clipboard when it's ready."
+notify "Prompt enhancement started" "Rewriting for $model_name. The prompt will be on your clipboard when it's ready."
 
-PE_MODE="$mode" PE_PROVIDER="$provider" PE_MODEL="${MODEL[$mode]}" PE_EFFORT="$effort" PE_TIMEOUT="$timeout" PE_BIN="$bin" \
+PE_MODEL_NAME="$model_name" PE_PROVIDER="$provider" PE_MODEL="${MODEL[$mode]}" PE_EFFORT="$effort" PE_TIMEOUT="$timeout" PE_BIN="$bin" \
   nohup /bin/zsh "$script_path" --run "$job_dir" >/dev/null 2>&1 &!

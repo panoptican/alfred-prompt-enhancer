@@ -123,13 +123,28 @@ else: print(text,end='')
         self.wait(lambda: self.events.exists() and any(x in self.events.read_text() for x in
                    ('|Prompt enhanced\n', '|Prompt enhancement failed\n', '|Prompt enhancement superseded\n')))
 
+    def action_names(self):
+        """Mode -> the name of the Universal Action that sets it, without "PE: "."""
+        data = plistlib.loads((ROOT/'workflow'/'info.plist').read_bytes())
+        objects = {o['uid']: o for o in data['objects']}
+        names = {}
+        for o in data['objects']:
+            if o['type'] != 'alfred.workflow.trigger.universalaction': continue
+            for link in data['connections'].get(o['uid'], []):
+                mode = objects[link['destinationuid']]['config'].get('variables', {}).get('ENHANCER_MODE')
+                if mode: names[mode] = o['config']['name'].removeprefix('PE: ')
+        return names
+
     def test_all_modes(self):
+        names = self.action_names()
         for mode in ('opus-5-5','sonnet-5-5','haiku-5-5','fable-5-2','gpt-6.1-sol','gpt-6-luna','gpt-6-astra'):
             with self.subTest(mode=mode):
                 self.events.unlink(missing_ok=True)
                 self.assertEqual(self.launch(ENHANCER_MODE=mode).returncode, 0)
                 self.finished()
                 self.assertEqual(self.clip.read_text(), 'rewritten prompt')
+                # Notifications name the model as the action the user picked did.
+                self.assertIn(f'words for {names[mode]} are on your clipboard', self.events.read_text())
 
     def claude_args(self):
         self.launch()
@@ -168,13 +183,13 @@ else: print(text,end='')
         self.assertFalse(self.clip.exists())
 
     def test_failure_shows_the_cli_reason(self):
-        for mode, reason in (('sonnet-5-5', "There's an issue with the selected model."),
-                             ('gpt-6.1-sol', 'The model is not supported.')):
+        for mode, name, reason in (('sonnet-5-5', 'Claude Sonnet 5.5', "There's an issue with the selected model."),
+                                   ('gpt-6.1-sol', 'GPT 6.1 Sol', 'The model is not supported.')):
             with self.subTest(mode=mode):
                 self.events.unlink(missing_ok=True)
                 self.launch(ENHANCER_MODE=mode, BEHAVIOR='unavailable')
                 self.finished()
-                self.assertIn(f'\n{mode}: {reason}\n', self.events.read_text())
+                self.assertIn(f'\n{name}: {reason}\n', self.events.read_text())
 
     def test_blank_is_not_copied(self):
         self.launch(BEHAVIOR='blank')
