@@ -161,6 +161,13 @@ else: print(text,end='')
         self.finished()
         self.assertEqual(next(self.cache.glob('job-*/auto-memory-off')).read_text(), '1')
 
+    def test_codex_runs_without_hooks_memories_plugins_or_apps(self):
+        self.launch(ENHANCER_MODE='gpt-6-luna')
+        self.finished()
+        args = next(self.cache.glob('job-*/argv')).read_text().split('\n')
+        for feature in ('hooks', 'memories', 'plugins', 'apps'):
+            self.assertIn(f'features.{feature}=false', args)
+
     def test_claude_runs_without_tools_mcp_or_skills(self):
         args = self.claude_args()
         self.assertEqual(args[args.index('--tools') + 1], '')

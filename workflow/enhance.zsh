@@ -301,10 +301,15 @@ if [[ $# == 2 && "${1:-}" == "--run" ]]; then
       fi
     done
   else
+    # Like Claude above, a rewrite needs none of the user's hooks, memories,
+    # plugins or apps. Without them it sends about 40% fewer tokens and skips
+    # the hooks' startup time. -c, unlike --disable, only warns about a
+    # feature an older Codex doesn't know.
     run_with_deadline "$deadline" "$PE_BIN" exec --ephemeral --skip-git-repo-check --sandbox read-only --color never \
       -c 'web_search="disabled"' \
       -c "model_reasoning_effort=\"$PE_EFFORT\"" \
       -c 'model_verbosity="low"' \
+      -c features.hooks=false -c features.memories=false -c features.plugins=false -c features.apps=false \
       --model "$PE_MODEL" --output-last-message "$output_file" - \
       < "$request_file" > /dev/null 2> "$stderr_file" || ok=0
   fi
