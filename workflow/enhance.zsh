@@ -190,6 +190,26 @@ describe_seconds() {
   (( n == 1 )) && print -r -- "$n $unit" || print -r -- "$n ${unit}s"
 }
 
+# Bracketed gaps left for the user to fill in, such as [which prototype?] or
+# [paste the log here]. Code, links and short tags such as [x] don't count.
+count_gaps() {
+  /usr/bin/awk '
+    /^[[:space:]]*```/ { fence = !fence; next }
+    fence { next }
+    {
+      line = $0
+      gsub(/`[^`]*`/, "", line)
+      while (match(line, /\[[^][]*\]/)) {
+        inner = substr(line, RSTART + 1, RLENGTH - 2)
+        after = substr(line, RSTART + RLENGTH, 1)
+        if (after != "(" && inner ~ /[[:alpha:]]/ && inner ~ / /) gaps++
+        line = substr(line, RSTART + RLENGTH)
+      }
+    }
+    END { print gaps + 0 }
+  ' "$1"
+}
+
 # Only a leading provider error is an error envelope, not a quoted substring.
 output_error() {
   [[ -s "$output_file" ]] && grep -q '^API Error:' "$output_file"
@@ -301,7 +321,14 @@ if [[ $# == 2 && "${1:-}" == "--run" ]]; then
     elif pbcopy < "$output_file"; then
       terminal_state=succeeded
       words="$(/usr/bin/wc -w < "$output_file" | /usr/bin/tr -d ' ')"
-      notify "Prompt enhanced" "$words words for $PE_MODEL_NAME are on your clipboard."
+      message="$words words for $PE_MODEL_NAME are on your clipboard."
+      gaps="$(count_gaps "$output_file")"
+      if (( gaps == 1 )); then
+        message+=" Fill in 1 bracketed gap."
+      elif (( gaps > 1 )); then
+        message+=" Fill in $gaps bracketed gaps."
+      fi
+      notify "Prompt enhanced" "$message"
       /usr/bin/afplay /System/Library/Sounds/Glass.aiff >/dev/null 2>&1 || true
     else
       notify "Prompt enhancement failed" "$PE_MODEL_NAME: Could not copy the result to the clipboard. It is saved in the job folder."

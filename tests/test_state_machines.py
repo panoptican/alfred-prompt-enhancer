@@ -160,6 +160,18 @@ else: print(text,end='')
         self.assertIn('--strict-mcp-config', args)
         self.assertIn('--disable-slash-commands', args)
 
+    def test_success_counts_bracketed_gaps(self):
+        prompt = ('Fix [which page?] but keep `items[0]` and read [the docs](https://x.y).\n'
+                  '```\nlet pair = [first, second]\n```\n[paste the log here]\n')
+        for result, note in ((prompt, ' Fill in 2 bracketed gaps.'),
+                             ('Fix [which page?] today.', ' Fill in 1 bracketed gap.'),
+                             ('Nothing to fill in: [x] and arr[1].', '')):
+            with self.subTest(result=result):
+                self.events.unlink(missing_ok=True)
+                self.launch(RESULT=result)
+                self.finished()
+                self.assertIn(f'are on your clipboard.{note}\n', self.events.read_text())
+
     def test_busy_retry(self):
         self.launch(BEHAVIOR='busy')
         self.finished()
