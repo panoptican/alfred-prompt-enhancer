@@ -75,6 +75,7 @@ if behavior == 'unavailable':
  sys.exit(1)
 text={'blank':'   \\n\\t', 'empty':'', 'quoted':'Explain the string API Error: in this log.'}.get(behavior,os.environ.get('RESULT','rewritten prompt'))
 if '--output-last-message' in sys.argv:
+ sys.stderr.write('tokens used\\n3,121\\n')
  pathlib.Path(sys.argv[sys.argv.index('--output-last-message')+1]).write_text(text)
 else: print(text,end='')
 ''')
@@ -356,6 +357,7 @@ else: print(text,end='')
             self.launch(ENHANCER_MODE=mode, BEHAVIOR='empty')
             self.finished()
             self.assertFalse(self.clip.exists())
+            self.assertIn(': The model returned nothing.\n', self.events.read_text())
 
     def test_invalid_requests_do_not_create_jobs(self):
         self.assertNotEqual(self.launch(ENHANCER_MODE='unknown').returncode,0)

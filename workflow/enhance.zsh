@@ -226,7 +226,10 @@ failure_reason() {
     reason="$(grep '^ERROR: ' "$stderr_file" 2>/dev/null | tail -1 || true)"
     reason="${reason#ERROR: }"
   fi
-  [[ -n "$reason" || ! -s "$stderr_file" ]] || reason="$(tail -3 "$stderr_file" | tr '\n' ' ')"
+  # After a clean exit, stderr holds only progress such as "tokens used".
+  if [[ -z "$reason" ]] && (( ! ok )) && [[ -s "$stderr_file" ]]; then
+    reason="$(tail -3 "$stderr_file" | tr '\n' ' ')"
+  fi
   print -r -- "${reason:-The model returned nothing.}"
 }
 
