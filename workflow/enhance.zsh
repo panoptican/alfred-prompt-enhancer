@@ -211,6 +211,8 @@ finish_job() {
 # Background phase: run the model, copy the result, notify.
 # ---------------------------------------------------------------------------
 if [[ $# == 2 && "${1:-}" == "--run" ]]; then
+  # The PATH set above replaced the one the foreground built.
+  export PATH="${PE_BIN:h}:$PATH"
   job_dir="${2:A}"
   request_file="$job_dir/request.md"
   output_file="$job_dir/output.txt"
@@ -335,16 +337,23 @@ if [[ "$provider" == "claude" ]]; then
   bin="${CLAUDE_BIN:-$(find_cli claude)}"
   [[ -n "$bin" ]] || fail "Claude Code isn't installed. Install it from claude.com/claude-code."
   [[ -x "$bin" ]] || fail "Claude Code executable not found: $bin"
-  bin="${bin:a}"
+else
+  bin="${CODEX_BIN:-$(find_cli codex)}"
+  [[ -n "$bin" ]] || fail "The Codex CLI isn't installed. Install it with 'npm install -g @openai/codex'."
+  [[ -x "$bin" ]] || fail "Codex executable not found: $bin"
+fi
+# Node-based CLIs find their own Node through PATH, so put the CLI's folder
+# first, for the sign-in check too. :a keeps a version manager's symlink
+# folder, which is where its node lives.
+bin="${bin:a}"
+export PATH="${bin:h}:$PATH"
+
+if [[ "$provider" == "claude" ]]; then
   if ! auth_json="$("$bin" auth status --json 2>/dev/null)" ||
       ! print -r -- "$auth_json" | grep -Eq '"loggedIn":[[:space:]]*true'; then
     fail "Claude Code isn't signed in. Run 'claude auth login' in Terminal."
   fi
 else
-  bin="${CODEX_BIN:-$(find_cli codex)}"
-  [[ -n "$bin" ]] || fail "The Codex CLI isn't installed. Install it with 'npm install -g @openai/codex'."
-  [[ -x "$bin" ]] || fail "Codex executable not found: $bin"
-  bin="${bin:a}"
   "$bin" login status >/dev/null 2>&1 || fail "Codex isn't signed in. Run 'codex login' in Terminal."
 fi
 
@@ -365,6 +374,5 @@ unlock_cache
 
 notify "Prompt enhancement started" "Rewriting for $mode. The prompt will be on your clipboard when it's ready."
 
-# Node-based CLIs find their own Node through PATH, so put the CLI's folder first.
-PATH="${bin:h}:$PATH" PE_MODE="$mode" PE_PROVIDER="$provider" PE_MODEL="${MODEL[$mode]}" PE_EFFORT="$effort" PE_TIMEOUT="$timeout" PE_BIN="$bin" \
+PE_MODE="$mode" PE_PROVIDER="$provider" PE_MODEL="${MODEL[$mode]}" PE_EFFORT="$effort" PE_TIMEOUT="$timeout" PE_BIN="$bin" \
   nohup /bin/zsh "$script_path" --run "$job_dir" >/dev/null 2>&1 &!

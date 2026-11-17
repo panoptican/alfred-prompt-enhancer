@@ -322,6 +322,26 @@ else: print(text,end='')
         self.assertIn('literal $text',request)
         self.assertIn('effort=medium',(job/'job.log').read_text())
 
+    def test_cli_runs_with_its_own_runtime(self):
+        # Like an npm CLI under nvm: its env shebang names a runtime that sits
+        # only beside the CLI, not on the workflow's PATH.
+        folder = self.root/'nodebin'
+        folder.mkdir()
+        runtime = folder/'fakenode'
+        runtime.write_text('#!/bin/sh\nexec /usr/bin/python3 "$@"\n')
+        runtime.chmod(0o755)
+        cli = folder/'model'
+        cli.write_text('#!/usr/bin/env fakenode\n' + self.cli.read_text().split('\n', 1)[1])
+        cli.chmod(0o755)
+        for mode in ('sonnet-5-5', 'gpt-6.1-sol'):
+            with self.subTest(mode=mode):
+                self.events.unlink(missing_ok=True)
+                self.clip.unlink(missing_ok=True)
+                result = self.launch(ENHANCER_MODE=mode, CLAUDE_BIN=str(cli), CODEX_BIN=str(cli))
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.finished()
+                self.assertEqual(self.clip.read_text(), 'rewritten prompt')
+
     def test_relative_cli_override(self):
         self.assertEqual(self.launch(CLAUDE_BIN='bin/model').returncode,0)
         self.finished()
