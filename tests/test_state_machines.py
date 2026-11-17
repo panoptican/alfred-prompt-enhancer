@@ -134,6 +134,12 @@ else: print(text,end='')
     def test_claude_saves_no_session(self):
         self.assertIn('--no-session-persistence', self.claude_args())
 
+    def test_claude_runs_without_tools_mcp_or_skills(self):
+        args = self.claude_args()
+        self.assertEqual(args[args.index('--tools') + 1], '')
+        self.assertIn('--strict-mcp-config', args)
+        self.assertIn('--disable-slash-commands', args)
+
     def test_busy_retry(self):
         self.launch(BEHAVIOR='busy')
         self.finished()
