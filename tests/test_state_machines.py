@@ -392,5 +392,13 @@ else: print(text,end='')
         (self.wf/'templates'/'unknown.md').write_text('template')
         self.assertNotEqual(self.build().returncode,0)
 
+    def test_build_rejects_reworded_gap_rule(self):
+        self.assertEqual(self.build().returncode, 0)
+        path = self.wf/'templates'/'opus-5-5.md'
+        path.write_text(path.read_text().replace('Use at most three.', 'Use at most five.'))
+        result = self.build()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('templates/opus-5-5.md', result.stderr)
+
 
 if __name__ == '__main__': unittest.main()

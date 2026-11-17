@@ -20,9 +20,13 @@ for mode in $action_modes; do
   (( ${script_modes[(Ie)$mode]} )) || { print -u2 "Action uses unknown mode: $mode"; exit 1; }
 done
 
+# Every template keeps the bracketed-gap rule word for word, up to the word
+# for the model it writes for.
+gap_rule='Some facts would change the result and have no safe default, such as which project, which file, or where output goes. Put each one in square brackets where it belongs, like `[which prototype?]`, so the user sees the gap before they paste. Use at most three. For smaller gaps, write an "Assume …" line the '
 for template in "$wf"/templates/*.md(N); do
   mode="${template:t:r}"
   (( ${script_modes[(Ie)$mode]} )) || { print -u2 "Template uses unknown mode: $mode"; exit 1; }
+  grep -qF -- "$gap_rule" "$template" || { print -u2 "Template rewords the bracketed-gap rule: templates/${template:t}"; exit 1; }
 done
 
 version="$(/usr/libexec/PlistBuddy -c 'Print :version' "$wf/info.plist")"
