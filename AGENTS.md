@@ -17,7 +17,7 @@ Shareable Alfred workflow that rewrites selected text into a prompt for a specif
 
 - Templates stay neutral: no names, clients or personal details. Personal context comes only from the `{{ABOUT_USER}}` and `{{MISHEARD_NAMES}}` placeholders.
 - The bracketed-gap rule (at most three `[question?]` gaps, "Assume …" lines for smaller ones) uses the same wording in every template.
-- Adding a mode takes three things that must match: a line in `enhance.zsh`, `templates/<mode>.md`, and a Universal Action that sets `ENHANCER_MODE`. `build.sh` checks that they agree.
+- Adding a mode takes three things that must match: a line in `enhance.zsh`, `templates/<mode>.md`, and a Universal Action that sets `ENHANCER_MODE`. `build.sh` checks that they agree. The line's name is the action's name without "PE: ", and the tests check that.
 
 ## Replacing a model with a newer version
 
@@ -33,7 +33,8 @@ Keep the old action next to the new one only when some users can't reach the new
 
 ## Checks
 
-- `./build.sh` validates the plist, the script syntax and the mode/template/action match.
+- `./build.sh` validates the plist, the script syntax, the mode/template/action match and the shared bracketed-gap wording.
+- `python3 -m unittest discover -s tests` runs the offline process tests, about 40 seconds. They stub the CLIs, notifications, sound and clipboard, so they need no account.
 - To check a mode end to end, run the script the way Alfred does, from `workflow/`:
   `ENHANCER_MODE=sonnet-5-5 alfred_workflow_bundleid=net.spidleweb.prompt-enhancer zsh enhance.zsh "some test text"`
   The result goes to the clipboard and the job folder under the cache directory.
