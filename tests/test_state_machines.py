@@ -67,6 +67,11 @@ if behavior in ('busy','busy-zero') and n < int(os.environ.get('SUCCEED_AT','3')
  sys.exit(0 if behavior == 'busy-zero' else 1)
 if behavior == 'failed':
  print('partial text'); sys.exit(1)
+if behavior == 'unavailable':
+ # Claude Code explains on stdout; Codex in an ERROR: line among progress lines.
+ sys.stderr.write('warning: unknown model\\nERROR: The model is not supported.\\nhook: Stop Completed\\n')
+ if '--output-last-message' not in sys.argv: print("There's an issue with the selected model.")
+ sys.exit(1)
 text={'blank':'   \\n\\t', 'empty':'', 'quoted':'Explain the string API Error: in this log.'}.get(behavior,os.environ.get('RESULT','rewritten prompt'))
 if '--output-last-message' in sys.argv:
  pathlib.Path(sys.argv[sys.argv.index('--output-last-message')+1]).write_text(text)
@@ -161,6 +166,15 @@ else: print(text,end='')
         self.launch(BEHAVIOR='failed')
         self.finished()
         self.assertFalse(self.clip.exists())
+
+    def test_failure_shows_the_cli_reason(self):
+        for mode, reason in (('sonnet-5-5', "There's an issue with the selected model."),
+                             ('gpt-6.1-sol', 'The model is not supported.')):
+            with self.subTest(mode=mode):
+                self.events.unlink(missing_ok=True)
+                self.launch(ENHANCER_MODE=mode, BEHAVIOR='unavailable')
+                self.finished()
+                self.assertIn(f'\n{mode}: {reason}\n', self.events.read_text())
 
     def test_blank_is_not_copied(self):
         self.launch(BEHAVIOR='blank')

@@ -194,6 +194,21 @@ output_error() {
   [[ -s "$output_file" ]] && grep -q '^API Error:' "$output_file"
 }
 
+# The CLI's own reason for a failure, for the notification. Claude Code prints
+# its errors on stdout. Codex prints them to stderr as ERROR: lines, among
+# progress lines that say nothing about the failure.
+failure_reason() {
+  local reason=""
+  if [[ "$PE_PROVIDER" == claude ]]; then
+    reason="$(grep -m1 '[^[:space:]]' "$output_file" 2>/dev/null || true)"
+  else
+    reason="$(grep '^ERROR: ' "$stderr_file" 2>/dev/null | tail -1 || true)"
+    reason="${reason#ERROR: }"
+  fi
+  [[ -n "$reason" || ! -s "$stderr_file" ]] || reason="$(tail -3 "$stderr_file" | tr '\n' ' ')"
+  print -r -- "${reason:-The model returned nothing.}"
+}
+
 finish_job() {
   # Exiting early (a signal) must not leave the CLI running.
   stop_cli KILL
@@ -297,10 +312,7 @@ if [[ $# == 2 && "${1:-}" == "--run" ]]; then
     notify "Prompt enhancement failed" "$PE_MODE: $name didn't respond within $(describe_seconds "$timeout"). Try again in a moment."
     terminal_notified=1
   else
-    detail="$api_error"
-    [[ -z "$detail" && -s "$stderr_file" ]] && detail="$(tail -3 "$stderr_file" | tr '\n' ' ')"
-    [[ -z "$detail" ]] && detail="The model returned nothing."
-    notify "Prompt enhancement failed" "$PE_MODE: $detail"
+    notify "Prompt enhancement failed" "$PE_MODE: $(failure_reason)"
     terminal_notified=1
   fi
   [[ "$terminal_state" != failed ]] || exit 1
