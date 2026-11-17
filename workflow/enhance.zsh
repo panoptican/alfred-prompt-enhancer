@@ -269,6 +269,8 @@ if [[ $# == 2 && "${1:-}" == "--run" ]]; then
 
   ok=1
   if [[ "$PE_PROVIDER" == "claude" ]]; then
+    # Auto memory would leave a folder under ~/.claude/projects for every job.
+    export CLAUDE_CODE_DISABLE_AUTO_MEMORY=1
     delay=10
     for attempt in 0 1 2; do
       # A rewrite needs no tools. --tools "" removes only the built-in ones, so

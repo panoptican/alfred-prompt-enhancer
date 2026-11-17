@@ -46,6 +46,7 @@ if sys.argv[1] == 'auth':
  sys.exit(1 if os.environ.get('AUTH_FALSE') else 0)
 if sys.argv[1] == 'login': sys.exit(0)
 pathlib.Path('argv').write_text('\\n'.join(sys.argv[1:]))
+pathlib.Path('auto-memory-off').write_text(os.environ.get('CLAUDE_CODE_DISABLE_AUTO_MEMORY', ''))
 sys.stdin.read()
 count=pathlib.Path('attempts')
 n=int(count.read_text())+1 if count.exists() else 1
@@ -153,6 +154,12 @@ else: print(text,end='')
 
     def test_claude_saves_no_session(self):
         self.assertIn('--no-session-persistence', self.claude_args())
+
+    def test_claude_leaves_no_project_folder(self):
+        self.env.pop('CLAUDE_CODE_DISABLE_AUTO_MEMORY', None)
+        self.launch()
+        self.finished()
+        self.assertEqual(next(self.cache.glob('job-*/auto-memory-off')).read_text(), '1')
 
     def test_claude_runs_without_tools_mcp_or_skills(self):
         args = self.claude_args()
