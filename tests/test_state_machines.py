@@ -262,7 +262,7 @@ else: print(text,end='')
         self.wait(lambda: all(gone(pid) for pid in pids))
 
     def test_hung_cli_is_killed(self):
-        for mode, name in (('sonnet-5-5', 'Claude'), ('gpt-6.1-sol', 'Codex')):
+        for mode, name in (('sonnet-5-5', 'Claude Sonnet 5.5'), ('gpt-6.1-sol', 'GPT 6.1 Sol')):
             with self.subTest(mode=mode):
                 self.events.unlink(missing_ok=True)
                 self.launch(ENHANCER_MODE=mode, BEHAVIOR='hang', ENHANCER_TIMEOUT='1')
@@ -280,7 +280,7 @@ else: print(text,end='')
     def test_cli_ignoring_term_is_killed(self):
         self.launch(BEHAVIOR='hang', IGNORE_TERM='1', ENHANCER_TIMEOUT='1')
         self.finished()
-        self.assertIn("Claude didn't respond", self.events.read_text())
+        self.assertIn("Claude Sonnet 5.5 didn't respond", self.events.read_text())
         job = next(self.cache.glob('job-*'))
         self.assert_dead([int(pid) for pid in (job/'hung.pids').read_text().split()])
 

@@ -336,8 +336,7 @@ if [[ $# == 2 && "${1:-}" == "--run" ]]; then
     fi
     unlock_cache
   elif (( timed_out )); then
-    name=Claude; [[ "$PE_PROVIDER" == claude ]] || name=Codex
-    notify "Prompt enhancement failed" "$PE_MODEL_NAME: $name didn't respond within $(describe_seconds "$timeout"). Try again in a moment."
+    notify "Prompt enhancement failed" "$PE_MODEL_NAME didn't respond within $(describe_seconds "$timeout"). Try again in a moment."
     terminal_notified=1
   else
     notify "Prompt enhancement failed" "$PE_MODEL_NAME: $(failure_reason)"
