@@ -233,8 +233,10 @@ if [[ $# == 2 && "${1:-}" == "--run" ]]; then
   if [[ "$PE_PROVIDER" == "claude" ]]; then
     delay=10
     for attempt in 0 1 2; do
+      # No saved session: the transcript would keep the selected text outside
+      # the job folders that retention cleans up.
       if run_with_deadline "$deadline" "$PE_BIN" --print --model "$PE_MODEL" --permission-mode plan \
-          --output-format text --effort "$PE_EFFORT" \
+          --output-format text --effort "$PE_EFFORT" --no-session-persistence \
           < "$request_file" > "$output_file" 2> "$stderr_file"; then
         ok=1
       else

@@ -45,6 +45,7 @@ if sys.argv[1] == 'auth':
  print('{"loggedIn": false}' if os.environ.get('AUTH_FALSE') else '{"loggedIn": true}')
  sys.exit(1 if os.environ.get('AUTH_FALSE') else 0)
 if sys.argv[1] == 'login': sys.exit(0)
+pathlib.Path('argv').write_text('\\n'.join(sys.argv[1:]))
 sys.stdin.read()
 count=pathlib.Path('attempts')
 n=int(count.read_text())+1 if count.exists() else 1
@@ -124,6 +125,14 @@ else: print(text,end='')
                 self.assertEqual(self.launch(ENHANCER_MODE=mode).returncode, 0)
                 self.finished()
                 self.assertEqual(self.clip.read_text(), 'rewritten prompt')
+
+    def claude_args(self):
+        self.launch()
+        self.finished()
+        return next(self.cache.glob('job-*/argv')).read_text().split('\n')
+
+    def test_claude_saves_no_session(self):
+        self.assertIn('--no-session-persistence', self.claude_args())
 
     def test_busy_retry(self):
         self.launch(BEHAVIOR='busy')
