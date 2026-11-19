@@ -45,3 +45,18 @@ This repository is the only source. The maintainer's own Alfred install is the b
 
 - To update the install, run `./build.sh` and open the new file in `dist/`. Alfred imports it over the installed version (same bundle ID) and keeps its settings.
 - Personal details go only in the workflow's settings (About you, Misheard names), which Alfred stores in the installed workflow's `prefs.plist`, or in the templates folder. They never go in this repository.
+
+To publish a release, after the version bump is committed on `main` and the checks pass:
+
+1. Run `./build.sh`.
+2. Tag the bump commit with an annotated tag named after the version, and push the tag: `git tag -a v1.2.0 -m "Prompt Enhancer 1.2.0"` then `git push origin main v1.2.0`.
+3. Create the GitHub release from that tag, titled the same as the tag message, with the built file attached: `gh release create v1.2.0 dist/Prompt-Enhancer-1.2.0.alfredworkflow --title "Prompt Enhancer 1.2.0" --notes-file <notes>`. The notes say what changed for users and end with how to update.
+
+Version 1.1.2 was bumped in `info.plist` but never tagged or released; its changes first shipped in 1.2.0. Releases go 1.1.1, then 1.2.0.
+
+## Ship
+
+- **Deploys by:** not deployed. Users install the `.alfredworkflow` attached to a GitHub release, which is built, tagged and published by hand (see above).
+- **Merge:** commits go straight to `main`; there are no pull requests or merge commits so far.
+- **Check live:** `gh release list` shows the new version as Latest, with its `.alfredworkflow` attached.
+- **Checks:** `./build.sh` and `python3 -m unittest discover -s tests`, run by hand. No CI.
